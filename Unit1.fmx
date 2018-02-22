@@ -1,0 +1,46 @@
+object TestForm: TTestForm
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 319
+  ClientWidth = 306
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnShow = FormShow
+  DesignerMasterStyle = 0
+  object Rectangle3: TRectangle
+    Fill.Color = claAqua
+    Position.X = 18.000000000000000000
+    Position.Y = 156.000000000000000000
+    Size.Width = 129.000000000000000000
+    Size.Height = 137.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Rectangle2: TRectangle
+    Fill.Color = claDarkgreen
+    Position.X = 12.000000000000000000
+    Position.Y = 10.000000000000000000
+    Size.Width = 129.000000000000000000
+    Size.Height = 137.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Rectangle1: TRectangle
+    Fill.Color = claBlue
+    Position.X = 154.000000000000000000
+    Position.Y = 54.000000000000000000
+    Size.Width = 129.000000000000000000
+    Size.Height = 137.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object ImageCircle: TImage
+    MultiResBitmap = <
+      item
+      end>
+    Position.X = 106.000000000000000000
+    Position.Y = 92.000000000000000000
+    Size.Width = 80.000000000000000000
+    Size.Height = 80.000000000000000000
+    Size.PlatformDefault = False
+  end
+end
