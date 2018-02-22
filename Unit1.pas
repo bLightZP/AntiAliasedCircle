@@ -186,10 +186,10 @@ begin
   end;
 
   // Work-around fix
-  tmpMS := TMemoryStream.Create;
+  {tmpMS := TMemoryStream.Create;
   srcBitmap.SaveToStream(tmpMS);
   srcBitmap.LoadFromStream(tmpMS);
-  tmpMS.Free;
+  tmpMS.Free;}
 end;
 
 
