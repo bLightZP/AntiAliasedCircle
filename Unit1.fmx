@@ -4,6 +4,8 @@ object TestForm: TTestForm
   Caption = 'Form1'
   ClientHeight = 319
   ClientWidth = 306
+  Fill.Color = claYellowgreen
+  Fill.Kind = Solid
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
@@ -27,8 +29,8 @@ object TestForm: TTestForm
   end
   object Rectangle1: TRectangle
     Fill.Color = claBlue
-    Position.X = 154.000000000000000000
-    Position.Y = 54.000000000000000000
+    Position.X = 160.000000000000000000
+    Position.Y = 80.000000000000000000
     Size.Width = 129.000000000000000000
     Size.Height = 137.000000000000000000
     Size.PlatformDefault = False
@@ -37,10 +39,30 @@ object TestForm: TTestForm
     MultiResBitmap = <
       item
       end>
-    Position.X = 106.000000000000000000
-    Position.Y = 92.000000000000000000
+    Position.X = 110.000000000000000000
+    Position.Y = 110.000000000000000000
     Size.Width = 80.000000000000000000
     Size.Height = 80.000000000000000000
     Size.PlatformDefault = False
+  end
+  object Button1: TButton
+    Position.X = 186.000000000000000000
+    Position.Y = 228.000000000000000000
+    Size.Width = 100.000000000000000000
+    Size.Height = 37.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    Text = 'Test Standard'
+    OnClick = Button1Click
+  end
+  object Button2: TButton
+    Position.X = 186.000000000000000000
+    Position.Y = 272.000000000000000000
+    Size.Width = 100.000000000000000000
+    Size.Height = 37.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    Text = 'Test Optimized'
+    OnClick = Button2Click
   end
 end

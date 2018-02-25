@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
-  FMX.Objects;
+  FMX.Objects, FMX.Controls.Presentation, FMX.StdCtrls, System.Diagnostics;
 
 type
   TTestForm = class(TForm)
@@ -13,7 +13,11 @@ type
     Rectangle1: TRectangle;
     Rectangle2: TRectangle;
     Rectangle3: TRectangle;
+    Button1: TButton;
+    Button2: TButton;
     procedure FormShow(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -27,7 +31,7 @@ implementation
 
 {$R *.fmx}
 
-uses math;
+uses math, system.uiconsts;
 
 type
   TOpacityMap = Array[0..4095] of PByteArray;
@@ -145,58 +149,130 @@ begin
 end;
 
 
+    procedure DrawAntiAliasedCircle(srcBitmap: TBitmap; FillColor : TAlphaColor; CenterX, CenterY, Radius, LineWidth, Feather: single);
+    var
+      FillR                      : Integer;
+      FillG                      : Integer;
+      FillB                      : Integer;
+      FillRGB                    : Integer;
+      OpacityMap                 : TOpacityMap;
+      AlphaScanLine              : Array[0..4095] of TAlphaColor;
+      bitmapData                 : FMX.Graphics.TBitmapData;
+      tmpScanLine                : Pointer;
+      X,Y                        : Integer;
 
-procedure DrawAntiAliasedCircle(srcBitmap: TBitmap; FillColor : TAlphaColor; CenterX, CenterY, Radius, LineWidth, Feather: single);
-var
-  FillR                      : Integer;
-  FillG                      : Integer;
-  FillB                      : Integer;
-  FillRGB                    : Integer;
-  OpacityMap                 : TOpacityMap;
-  AlphaScanLine              : Array[0..4095] of TAlphaColor;
-  bitmapData                 : FMX.Graphics.TBitmapData;
-  tmpScanLine                : Pointer;
-  X,Y                        : Integer;
-  tmpMS                      : TMemoryStream;
-
-begin
-  {Initialization}
-  FillR  := TAlphaColorRec(FillColor).R;
-  FillG  := TAlphaColorRec(FillColor).G;
-  FillB  := TAlphaColorRec(FillColor).B;
-
-  CreateAntiAliasedCircleOpacityMap(OpacityMap, srcBitmap.Width, srcBitmap.Height, CenterX, CenterY, Radius, LineWidth, Feather);
-
-  {create image based on opacity map and free memory}
-  If srcBitmap.Map(TMapAccess.Write, bitmapData) then
-  try
-    FillRGB := (FillR shl 16)+(FillG shl 8)+FillB;
-
-    for Y := 0 to srcBitmap.Height-1 do
     begin
-      for X := 0 to srcBitmap.Width-1 do
-        AlphaScanLine[X] := (OpacityMap[Y][X] shl 24)+FillRGB; // Opacity
+      {Initialization}
+      FillR  := TAlphaColorRec(FillColor).R;
+      FillG  := TAlphaColorRec(FillColor).G;
+      FillB  := TAlphaColorRec(FillColor).B;
 
-      tmpScanLine := bitmapData.GetScanline(Y);
-      AlphaColorToScanLine(@AlphaScanLine,tmpScanLine,srcBitmap.Width,srcBitmap.PixelFormat);
-      FreeMem(OpacityMap[Y]);
+      CreateAntiAliasedCircleOpacityMap(OpacityMap, srcBitmap.Width, srcBitmap.Height, CenterX, CenterY, Radius, LineWidth, Feather);
+
+      {create image based on opacity map and free memory}
+      If srcBitmap.Map(TMapAccess.Write, bitmapData) then
+      try
+        FillRGB := (FillR shl 16)+(FillG shl 8)+FillB;
+
+        for Y := 0 to srcBitmap.Height-1 do
+        begin
+          for X := 0 to srcBitmap.Width-1 do
+          begin
+            AlphaScanLine[X] := (OpacityMap[Y][X] shl 24)+FillRGB; // Opacity
+            AlphaScanLine[X] := PremultiplyAlpha(AlphaScanLine[X]); // Add this for premultiplied Alpha
+          end;
+
+          tmpScanLine := bitmapData.GetScanline(Y);
+          AlphaColorToScanLine(@AlphaScanLine,tmpScanLine,srcBitmap.Width,srcBitmap.PixelFormat);
+          FreeMem(OpacityMap[Y]);
+        end;
+      finally
+        srcBitmap.Unmap(bitmapData);
+      end;
     end;
-  finally
-    srcBitmap.Unmap(bitmapData);
-  end;
 
-  // Work-around fix
-  {tmpMS := TMemoryStream.Create;
-  srcBitmap.SaveToStream(tmpMS);
-  srcBitmap.LoadFromStream(tmpMS);
-  tmpMS.Free;}
+
+    procedure DrawAntiAliasedCircleOptimized(srcBitmap: TBitmap; FillColor : TAlphaColor; CenterX, CenterY, Radius, LineWidth, Feather: single);
+    var
+      OpacityMap                 : TOpacityMap;
+      AlphaScanLine              : Array[0..4095] of TAlphaColor;
+      bitmapData                 : FMX.Graphics.TBitmapData;
+      tmpScanLine                : Pointer;
+      X,Y                        : Integer;
+      AlphaDiv                   : Single;
+
+    begin
+      {Initialization}
+      TAlphaColorRec(FillColor).A := 255;
+
+      CreateAntiAliasedCircleOpacityMap(OpacityMap, srcBitmap.Width, srcBitmap.Height, CenterX, CenterY, Radius, LineWidth, Feather);
+
+      {create image based on opacity map and free memory}
+      If srcBitmap.Map(TMapAccess.Write, bitmapData) then
+      try
+        for Y := 0 to srcBitmap.Height-1 do
+        begin
+          for X := 0 to srcBitmap.Width-1 do
+          begin
+            if OpacityMap[Y][X] = 0 then
+            begin
+              AlphaScanLine[X] := 0;
+            end
+              else
+            If OpacityMap[Y][X] = $FF then
+            begin
+              AlphaScanLine[X] := FillColor;
+            end
+              else
+            begin
+              AlphaDiv                           := OpacityMap[Y][X] / $FF;
+              TAlphaColorRec(AlphaScanLine[X]).R := Trunc(TAlphaColorRec(FillColor).R * AlphaDiv);
+              TAlphaColorRec(AlphaScanLine[X]).G := Trunc(TAlphaColorRec(FillColor).G * AlphaDiv);
+              TAlphaColorRec(AlphaScanLine[X]).B := Trunc(TAlphaColorRec(FillColor).B * AlphaDiv);
+              TAlphaColorRec(AlphaScanLine[X]).A := OpacityMap[Y][X];
+            end;
+          end;
+
+          tmpScanLine := bitmapData.GetScanline(Y);
+          AlphaColorToScanLine(@AlphaScanLine,tmpScanLine,srcBitmap.Width,srcBitmap.PixelFormat);
+          FreeMem(OpacityMap[Y]);
+        end;
+      finally
+        srcBitmap.Unmap(bitmapData);
+      end;
+    end;
+
+
+procedure TTestForm.Button1Click(Sender: TObject);
+var
+  stopWatch : TStopWatch;
+  iMS       : Int64;
+  I         : Integer;
+begin
+  stopWatch := TStopWatch.StartNew;
+  For I := 0 to 49999 do DrawAntiAliasedCircle(ImageCircle.Bitmap,TAlphaColorRec.Red,(ImageCircle.Width/2)-0.5, (ImageCircle.Height/2)-0.5, (ImageCircle.Width / 2)-1, 1, 1);
+  iMS := Round(stopWatch.Elapsed.TotalMilliseconds);
+  ShowMessage(IntToStr(iMS)+'ms');
+end;
+
+
+procedure TTestForm.Button2Click(Sender: TObject);
+var
+  stopWatch : TStopWatch;
+  iMS       : Int64;
+  I         : Integer;
+begin
+  stopWatch := TStopWatch.StartNew;
+  For I := 0 to 49999 do DrawAntiAliasedCircleOptimized(ImageCircle.Bitmap,TAlphaColorRec.Red,(ImageCircle.Width/2)-0.5, (ImageCircle.Height/2)-0.5, (ImageCircle.Width / 2)-1, 1, 1);
+  iMS := Round(stopWatch.Elapsed.TotalMilliseconds);
+  ShowMessage(IntToStr(iMS)+'ms');
 end;
 
 
 procedure TTestForm.FormShow(Sender: TObject);
 begin
   ImageCircle.Bitmap.SetSize(Trunc(ImageCircle.Width),Trunc(ImageCircle.Height));
-  DrawAntiAliasedCircle(ImageCircle.Bitmap,TAlphaColorRec.Red,(ImageCircle.Width/2)-0.5, (ImageCircle.Height/2)-0.5, (ImageCircle.Width / 2)-1, 1, 1);
+  //DrawAntiAliasedCircle1(ImageCircle.Bitmap,TAlphaColorRec.Red,(ImageCircle.Width/2)-0.5, (ImageCircle.Height/2)-0.5, (ImageCircle.Width / 2)-1, 1, 1);
 end;
 
 end.
